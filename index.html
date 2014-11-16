@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf8">
+    <title>Проверка последних публикаций</title>
+    <link href="/css/bootstrap.css" rel="stylesheet">
+    <style type="text/css">
+      body {
+        padding-top: 20px;
+        padding-left: 20px;
+      }
+      
+      h4 {margin-left: 10px;}
+      	.red {color: #BB0000;}
+      	.lightgrey {color: #BBBBBB;}
+		.green {color: #00AA00;}
+		.blue {color: #0088cc;}
+		.dashed {border-bottom: 1px dashed; cursor: pointer;}
+
+    </style>
+    <link href="/css/bootstrap-responsive.css" rel="stylesheet">
+    <script src="../jquery.min.js"></script>
+    <script type="text/javascript">
+	    
+	    
+	    function pad(num, size) {
+		    var s = num+"";
+		    while (s.length < size) s = "0" + s;
+		    return s;
+		}
+	    
+	   function timeConverter(UNIX_timestamp){
+		  var a = new Date(UNIX_timestamp*1000);
+		  var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+		  var year = a.getFullYear();
+		  var month = a.getMonth();
+		  var date = a.getDate();
+		  var hour = a.getHours();
+		  var min = a.getMinutes();
+		  var sec = a.getSeconds();
+		  var time = pad(date,2) + '.' + pad(month,2) + '.' + year ;
+		  return time;
+		}
+        
+    	function delete_object (id)
+    	{
+    		$.getJSON('/admin/actions.php?action=delete_temp&table=reviews&id='+id, function(data) {$("#review" + id).html('');});
+		}
+    	
+    	function good (id)
+    	{
+    		$("#review" + id).append('<span style="float: right;"><img src="/i/wait.gif" alt="Обработка..." /></span>');
+
+    		$.getJSON("/admin/actions.php?action=approvereview&id="+id, function(data) {
+    			$("#review" + id).css("visibility", "hidden");
+    		});
+    	}
+
+		function good_all ()
+		{
+			$("span[id*=approve]").click();
+		}
+		
+		
+    	function edit (id)
+    	{
+    		$("#review" + id).load("/admin/actions.php?action=edit_temp&table=reviews&id="+id);
+    	}
+
+    	function add_publication (id, name)
+    	{
+    		$("#review" + id).load("/admin/actions.php?action=show_temp&table=reviews&id="+id+"&add_publication="+encodeURIComponent(name));
+    	}
+
+    	function add_game (id, original)
+    	{
+    		$("#review" + id).load("/admin/actions.php?action=show_temp&table=reviews&id="+id+"&add_game="+encodeURIComponent(original));
+    	}
+
+    	function add_movie (id, russian)
+    	{
+    		$("#review" + id).load("/admin/actions.php?action=show_temp&table=reviews&id="+id+"&add_movie="+encodeURIComponent(russian));
+    	}    	
+    	function add_critic (id, name)
+    	{
+    		$("#review" + id).load("/admin/actions.php?action=show_temp&table=reviews&id="+id+"&add_critic="+encodeURIComponent(name));
+    	}
+    	
+    	function save (id)
+    	{
+    		
+    		$("#review" + id).load("/admin/actions.php?action=save_temp_review&id=" + id + "&russian="+encodeURIComponent($("#review" + id).find("#russian").val()) + "&original="+encodeURIComponent($("#review" + id).find("#original").val()) + "&codename="+encodeURIComponent($("#review" + id).find("#codename").val()) + "&author="+encodeURIComponent($("#review" + id).find("#author").val()) + "&critic_id="+encodeURIComponent($("#review" + id).find("#critic_id").val()) + "&publication="+encodeURIComponent($("#review" + id).find("#publication").val()) + "&publication_id="+encodeURIComponent($("#review" + id).find("#publication_id").val()) + "&grade="+encodeURIComponent($("#review" + id).find("#grade").val()) + "&date="+encodeURIComponent($("#review" + id).find("#date").val()) + "&issue="+encodeURIComponent($("#review" + id).find("#issue").val()) + "&summary="+encodeURIComponent($("#review" + id).find("#summary").val()) + "&type="+$("#review" + id).find("input[name='type']:checked").val());
+
+    	}
+    	
+	function nice_russian (russian)
+	{
+		russian=russian.trim();
+		rus=russian.split(' ');
+		nice=rus[0].charAt(0).toUpperCase() + rus[0].slice(1).toLowerCase();
+		
+		for (i=1; i<rus.length; i++)
+		{
+			if (rus[i]=='3D')
+			{
+				nice+=' '+rus[i];
+			}
+			else
+			{
+				pl=rus[i-1].slice(-1);
+				if (pl=='.' || pl=='-' || pl=='!' || pl=='?' || pl==':' || pl==';')
+					nice+=' ' + rus[i].slice(1).toLowerCase();
+				else
+					nice+=' ' + rus[i].toLowerCase();
+			}
+			
+		}
+		return nice;
+	}
+        
+        var content_table;
+        
+		function import_review (url, id, i)
+		{
+	    	$.ajax({url: "/parser.php?url=" + url,
+	    	  dataType: "json"})
+	    	  .done(function(data) {
+			if (data['noparser']=='true')
+				$('#place'+id + '_' + i).after(' <span class="red">Нет парсера.</span>');
+			else
+			if (data['nodata']=='true')
+				$('#place'+id + '_' + i).after(' <span class="red">Парсер сломался.</span>');
+			else
+			{
+				if (data['russian']=='')
+					data['russian']=data['original'];
+
+				$.ajax({url: "/useractions.php?action=insertreview&type=" + data['type'] + "&issue=" + encodeURIComponent(data['issue']) + "&title=" + encodeURIComponent(data['russian']) + "&publication=" + encodeURIComponent(data['publication']) + "&author=" + encodeURIComponent(data['author']) + "&grade=" + encodeURIComponent(data['grade']) + "&date=" + encodeURIComponent(data['date']) + "&summary=" + encodeURIComponent(data['summary']) + "&codename=" + encodeURIComponent(data['codename']) + "&page=" + encodeURIComponent(url),
+					dataType: "json"})
+				.done(function(rev) {
+
+					$('#place'+id + '_' + i).after('<div id="review' + rev['review_id'] + '" style="clear: both; border-bottom: 1px solid #cccccc; padding-bottom: 25px; padding-top: 10px;"></div>');
+					$('#review' + rev['review_id']).load('/admin/actions.php?action=show_temp&table=reviews&id='+rev['review_id']);
+
+				})
+		  		.fail(function() { alert("Не получилось добавить рецезию"); });
+		  		
+		  		
+		  }
+			
+			// $('#place'+id + '_' + i).load('/admin/actions.php?action=show_temp&table=reviews&id=145');
+			
+
+	    })
+	    .fail(function() { alert("Не получилось считать данные"); });
+    }
+        
+        function clearTable(table) { while (table.rows.length > 0) { table.deleteRow(0); } }
+        function addRow(table, data) {
+            var rowCount = table.rows.length;
+            var row = table.insertRow(rowCount);
+            row.data = data;
+
+            var cell5 = row.insertCell(0);
+            cell5.style.verticalAlign = 'top';
+            cell5.style.paddingTop = '14px';
+            var element4 = document.createElement("a");
+            element4.href = "#" + data.name;
+            element4.innerText = "T";
+            cell5.appendChild(element4);
+            
+            var cell4 = row.insertCell(0);
+            cell4.style.verticalAlign = 'top';
+            cell4.style.paddingTop = '14px';
+            var element3 = document.createElement("a");
+            element3.href = "#" + data.name;
+            element3.innerText = "X";
+            cell4.appendChild(element3);
+
+            var cell0 = row.insertCell(0);
+            cell0.style.verticalAlign = 'top';
+            cell0.style.paddingTop = '14px';
+            var element1 = document.createElement("a");
+            element1.href = "#" + data.name;
+            element1.innerText = "O";
+            cell0.appendChild(element1);
+
+            var cell1 = row.insertCell(1);
+            cell1.style.verticalAlign = 'top';
+            cell1.style.paddingTop = '14px';
+            var element2 = document.createElement("a");
+            element2.href = "#" + data.name;
+            element2.innerText = "V";
+            cell1.appendChild(element2);
+
+            var cell2 = row.insertCell(2);
+            cell2.style.verticalAlign = 'top';
+            var pub_title = document.createElement("h4");
+            pub_title.innerHTML = ' <a href="/publications/' + data.publication_id + '/" target="_blank">'+data.name+'</a>' + (data.page!=''?' <sup style="font-weight: normal; font-size: 12px;"><a href="' + data.page + '" target="_blank">сайт</a></sup>':'') + (data.module!=''?' <sup style="font-weight: normal; font-size: 12px; color: #aaaaaa;">' + data.module.split('_')[1] + '</sup>':'') + (data.parser_errors>0?' <sup style="font-weight: normal; font-size: 12px;"><a href="test.php?mod=' + data.codename + '" style="color: #DE1024;" target="_blank">ошибок парсера: ' + data.parser_errors +'</a></sup>':'') + (Math.round(+new Date()/1000)-data.last_timestamp>604800?' <sup style="font-weight: normal; font-size: 12px; color: #DB7114;">не обновлялся с ' + timeConverter(data.last_timestamp) +'</sup>':'');
+            var p1 = document.createElement("p");
+            p1.appendChild(pub_title);
+            cell2.appendChild(p1);
+
+            var cell3 = row.insertCell(3);
+            cell3.style.verticalAlign = 'top';
+            cell3.style.paddingTop = '36px';
+
+            element1.onclick = function () {
+                revise(row, function (e) {
+                    if (e == undefined) {
+                    	row.cells[3].innerText = "Проверено.";
+                        row.cells[1].innerHTML = "";
+                        row.cells[1].appendChild(element2);
+                    }
+                    else {
+	                    if (e.message=='')
+	                    	row.cells[3].innerText = "Ошибка.";
+	                    else
+	                    	row.cells[3].innerText = e.message;
+	                   }
+                });
+            }
+            
+            element2.onclick = function () {
+                $.get("./update.php?query=save&id=" + row.data.id + "&url=" + encodeURIComponent(row.data.url) + "&text=" + encodeURIComponent(row.data.text), function (response) {
+                    if (response.trim() == "OK") {
+                        row.cells[3].innerText = "Сохранил.";
+                        row.cells[1].innerHTML = "V";
+                    } else {
+                        row.cells[3].innerText = "Ошибка. Не удалось сохранить.";
+                    }
+                });
+            }
+            
+            element3.onclick = function () {
+                $.get("./update.php?query=reset&id=" + row.data.id, function (response) {
+                    if (response.trim() == "OK") {
+                        row.cells[3].innerText = "Обнулил.";
+                        row.cells[4].innerHTML = "X";
+                    } else {
+                        row.cells[3].innerText = "Ошибка. Не удалось обнулить.";
+                    }
+                });
+            }
+            
+            element4.onclick = function () {
+			console.log(row.data);
+
+	             $.getJSON("./modules/" + (row.data.module==''?row.data.codename:row.data.module) + ".php?id=" + row.data.id + "&url=1", function (data) {
+		             	if (data==null)
+		             		$.getJSON("/admin/actions.php?action=add_parser_error&publication_id="+row.data.id, function (subdata) {
+			             		$('#name_' + row.data.id).addClass('red');
+			             		// 00aa00
+			             		// 0088cc
+		                        console.log("Ошибок парсера: " + subdata.parser_errors);
+			                });
+			            else
+			            
+							$.getJSON("/admin/actions.php?action=remove_parser_errors&publication_id="+row.data.id, function (subdata) {
+		                        console.log("Ошибок парсера: " + subdata.parser_errors);
+			                });
+			            
+		             }
+		         );
+	            /*
+                $.get("./update.php?query=reset&id=" + row.data.id, function (response) {
+                    if (response.trim() == "OK") {
+                        row.cells[3].innerText = "Проверил.";
+                        row.cells[4].innerHTML = "X";
+                    } else {
+                        row.cells[3].innerText = "Ошибка. Не удалось проверить.";
+                    }
+                });
+                */
+            }
+
+            return row;
+        }
+        
+        function getmodules(table, callback) {
+            try {
+                $.getJSON("./getmodules.php", function (modules) {
+                    clearTable(table);
+                    for (var i = 0; i < modules.length; i++) { addRow(table, modules[i]); }
+                    if (callback != undefined) callback();
+                });
+            } catch (e) { if (callback != undefined) callback(e); }
+        }
+        
+        function revise(row, callback) {
+            try {
+                if (row.data.id != null) {
+                    $.getJSON("./modules/" + (row.data.module==''?row.data.codename:row.data.module) + ".php?id=" + row.data.id + "&url=" + encodeURIComponent(row.data.url), function (data) {
+                        if (data != null) {
+                            while (row.cells[2].hasChildNodes()) { row.cells[2].removeChild(row.cells[2].lastChild); }
+                            var pub_title = document.createElement("h4");
+                            pub_title.innerHTML = ' <a href="/publications/' + row.data.publication_id + '/" target="_blank"' + (data.length>0?' style="color: #00aa00;"':'') + ' id="name_' + row.data.publication_id + '">'+row.data.name + '</a>' + (row.data.page!=''?' <sup style="font-weight: normal; font-size: 12px;"><a href="' + row.data.page + '" target="_blank">сайт</a></sup>':'') + (row.data.module!=''?' <sup style="font-weight: normal; font-size: 12px; color: #aaaaaa;">' + row.data.module.split('_')[1] + '</sup>':'');
+                            var p1 = document.createElement("p");
+                            p1.appendChild(pub_title);
+                            row.cells[2].appendChild(p1);
+                            for (var i = 0; i < data.length; i++) {
+                                if (i == 0) {
+                                    row.data.url = data[i].url;
+                                    row.data.text = data[i].text;
+                                }
+                                var link = document.createElement("a");
+                                link.href = data[i].url;
+                                link.innerText = data[i].text;
+
+                                var pars = document.createElement("span");
+                                // pars.href = data[i].url;
+                                //pars.innerText = '[спарсить]';
+                                pars.innerHTML = ' <span id="place' + row.data.id + '_' + i + '" style="cursor: pointer; border-bottom: 1px dashed #0088cc; color: #0088cc;" onclick="import_review(\'' + data[i].url + '\', ' + row.data.id + ', ' + i + ');">[спарсить]</span>';
+                                var p = document.createElement("p");
+                                p.appendChild(link);
+                                p.appendChild(pars);
+
+// <span style="display: block;" id="place' + row.data.id + '_' + i + '"></span>
+                                row.cells[2].appendChild(p);
+                            }
+                        }
+							if (callback != undefined) callback();
+                        	
+                    });
+                } else { if (callback != undefined) callback({message: "Не заданы параметры!"}); }
+            } catch (e) { if (callback != undefined) callback(e); }
+        }
+        
+        function allrevise(table, i) {
+            if (i == undefined) {
+                i = 0;
+                getmodules(content_table, function () { allrevise(table, i); });
+            } else {
+                if (i < table.rows.length) {
+                    revise(table.rows[i], function (e) {
+                        if (e == undefined) table.rows[i].cells[3].innerText = "Проверено!";
+                        else table.rows[i].cells[3].innerText = "Ошибка!";
+                        i++;
+                        allrevise(table, i);
+                    });
+                }
+            }
+        }
+    </script>
+</head>
+<body>
+    <p>
+        <a href="#" onclick="javascript: allrevise(content_table);">Проверить все сайты</a>
+    </p>
+    <table id="content">
+        <tbody></tbody>
+    </table>
+    
+    <script type="text/javascript">
+        content_table = document.getElementById('content');
+        getmodules(content_table);
+    </script>
+</body>
+</html>
